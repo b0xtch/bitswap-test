@@ -82,32 +82,19 @@ mod tests {
         type Params = DefaultParams;
 
         fn contains(&mut self, cid: &Cid) -> Result<bool> {
-            let key = Forest_Cid::from_str(&cid.to_string()).unwrap();
-            println!("{:?}", &cid);
-            println!("{:?}", &key);
-
-            Ok(self.0.db.exists(key.to_bytes())?)
+            Ok(self.0.db.exists(cid.to_bytes())?)
         }
-
+    
         fn get(&mut self, cid: &Cid) -> Result<Option<Vec<u8>>> {
-            let key = Forest_Cid::from_str(&cid.to_string()).unwrap();
-            println!("{:?}", &cid);
-            println!("{:?}", &key);
-
-            Ok(self.0.db.read(key.to_bytes()).unwrap())
+            Ok(self.0.db.read(cid.to_bytes()).unwrap())
         }
-
+    
         fn insert(&mut self, block: &Block<Self::Params>) -> Result<()> {
-
-            let key = Forest_Cid::from_str(&block.cid().to_string()).unwrap();
-            println!("{:?}", &block.cid().to_string());
-            println!("{:?}", &key);
-
             self.0
                 .db
-                .write(key.to_bytes(), block.data().to_vec())
+                .write(&block.cid().to_bytes(), block.data().to_vec())
                 .unwrap();
-
+    
             Ok(())
         }
 
@@ -362,35 +349,5 @@ mod tests {
         let res = peer2.next().now_or_never();
         println!("{:?}", res);
         assert!(res.is_none());
-    }
-
-    // #[cfg(feature = "compat")]
-    #[async_std::test]
-    async fn compat_test() {
-        tracing_try_init();
-        let cid: Cid = "QmXQsqVRpp2W7fbYZHi4aB2Xkqfd3DpwWskZoLVEYigMKC"
-            .parse()
-            .unwrap();
-        let peer_id: PeerId = "QmRSGx67Kq8w7xSBDia7hQfbfuvauMQGgxcwSWw976x4BS"
-            .parse()
-            .unwrap();
-        let multiaddr: Multiaddr = "/ip4/54.173.33.96/tcp/4001".parse().unwrap();
-
-        #[cfg(feature = "rocksdb")]
-        let db = RocksDb::open("test_db").expect("Opening RocksDB must succeed");
-        let db = Arc::new(db);
-
-        let chain_store = Arc::new(UStore::new(Arc::clone(&db)));
-
-        let mut peer = Peer::new(Arc::clone(&chain_store));
-        peer.swarm()
-            .behaviour_mut()
-            .add_address(&peer_id, multiaddr);
-
-        let id = peer
-            .swarm()
-            .behaviour_mut()
-            .get(cid, std::iter::once(peer_id));
-        assert_complete_ok(peer.next().await, id);
     }
 }
